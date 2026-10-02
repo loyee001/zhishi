@@ -1,0 +1,31 @@
+Generated with built-in image_gen. One request per asset; no variants or retries.
+
+monstera.png
+Use case: photorealistic-natural.
+Asset type: square photography asset for a fresh, calm Chinese personal plant care website.
+Style/medium: realistic lifestyle plant photography, natural materials and healthy botanical detail, consistent editorial home photography.
+Scene/backdrop: soft pale warm off-white wall and tabletop, minimal and airy with a subtly fresh light-green atmosphere.
+Composition/framing: square image, one complete potted plant centered, all leaves and the entire pot visible with comfortable margins. Camera slightly above pot rim height, natural perspective.
+Lighting/mood: soft natural daylight from upper right, gentle realistic shadows, comfortable quiet mood.
+Constraints: one plant and its pot only; healthy natural leaves. No text, labels, charts, frames, logos, watermark, hands, people, extra props.
+Subject: a healthy Monstera deliciosa with characteristic naturally split glossy green leaves, planted in a warm off-white ceramic pot.
+
+mint.png
+Use case: photorealistic-natural.
+Asset type: square photography asset for a fresh, calm Chinese personal plant care website.
+Style/medium: realistic lifestyle plant photography, natural materials and healthy botanical detail, consistent editorial home photography.
+Scene/backdrop: soft pale warm off-white wall and tabletop, minimal and airy with a subtly fresh light-green atmosphere.
+Composition/framing: square image, one complete potted plant centered, all leaves and the entire pot visible with comfortable margins. Camera slightly above pot rim height, natural perspective.
+Lighting/mood: soft natural daylight from upper right, gentle realistic shadows, comfortable quiet mood.
+Constraints: one plant and its pot only; healthy natural leaves. No text, labels, charts, frames, logos, watermark, hands, people, extra props.
+Subject: a healthy lush mint herb with natural small serrated fresh green leaves, planted in a warm off-white lightly speckled ceramic pot.
+
+rubber.png
+Use case: photorealistic-natural.
+Asset type: square photography asset for a fresh, calm Chinese personal plant care website.
+Style/medium: realistic lifestyle plant photography, natural materials and healthy botanical detail, consistent editorial home photography.
+Scene/backdrop: soft pale warm off-white wall and tabletop, minimal and airy with a subtly fresh light-green atmosphere.
+Composition/framing: square image, one complete potted plant centered, all leaves and the entire pot visible with comfortable margins. Camera slightly above pot rim height, natural perspective.
+Lighting/mood: soft natural daylight from upper right, gentle realistic shadows, comfortable quiet mood.
+Constraints: one plant and its pot only; healthy natural leaves. No text, labels, charts, frames, logos, watermark, hands, people, extra props.
+Subject: a healthy rubber tree (Ficus elastica) with natural broad thick glossy deep-green oval leaves, planted in a simple warm off-white ceramic pot.
