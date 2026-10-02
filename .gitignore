@@ -1,0 +1,11 @@
+data/
+.DS_Store
+test-results/
+.private/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.tar.gz
+node_modules/

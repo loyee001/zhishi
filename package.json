@@ -1,0 +1,8 @@
+{
+  "name": "zhishi-plant-care",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs", "check": "node --check server.mjs && node --check plant-photos.mjs && node --check dist/app.js && node --check dist/model.js && node --check dist/reminders.js" },
+  "engines": { "node": ">=20" }
+}
