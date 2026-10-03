@@ -10,10 +10,21 @@ VERSION=$(cat "$BUNDLE/VERSION")
 BASE=/opt/zhishi
 DATA=/var/lib/zhishi
 RUNTIME_SOURCE=/root/tongbanji-20260925-VVox8g/runtime/bin/node
+CERT_DIR=/var/lib/caddy/zhishi-zhi-qdfb-tech
+CERT_FILE="$CERT_DIR/tls/fullchain.pem"
+KEY_FILE="$CERT_DIR/tls/key.pem"
 test -x "$RUNTIME_SOURCE"
 test -s "$BUNDLE/app/server.mjs"
 test -s "$BUNDLE/auth.hash"
 test -s "$BUNDLE/seed-data/plants.json"
+test -s "$CERT_FILE"
+test -s "$KEY_FILE"
+test -d "$CERT_DIR/webroot"
+# Use the server's trusted CA store to check the chain, hostname and validity.
+openssl verify -verify_hostname zhi.qdfb.tech -purpose sslserver -untrusted "$CERT_FILE" "$CERT_FILE" > /dev/null
+CERT_PUBLIC_KEY=$(openssl x509 -in "$CERT_FILE" -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256)
+KEY_PUBLIC_KEY=$(openssl pkey -in "$KEY_FILE" -passin pass: -pubout -outform DER | openssl dgst -sha256)
+[[ "$CERT_PUBLIC_KEY" == "$KEY_PUBLIC_KEY" ]] || { echo 'TLS certificate and private key do not match'; exit 1; }
 STAMP=$(date +%Y%m%d-%H%M%S)-$$
 BACKUP="$BASE/backups/$STAMP"
 install -d -m 755 "$BASE" "$BASE/releases" "$BASE/runtime"
@@ -122,8 +133,8 @@ if [[ ! -d "$BASE/releases/$VERSION" ]]; then
 fi
 cat > "$BACKUP/env.candidate" <<'ENV'
 PORT=18188
-BASE_PATH=/plants
-PUBLIC_ORIGIN=https://f.qdfb.tech
+BASE_PATH=
+PUBLIC_ORIGIN=https://zhi.qdfb.tech
 PLANT_DATA_DIR=/var/lib/zhishi
 PLANT_PHOTO_PROVIDER=inaturalist
 TZ=Asia/Shanghai
@@ -138,33 +149,49 @@ systemctl daemon-reload
 systemctl enable --now zhishi
 systemctl restart zhishi
 for attempt in {1..20}; do
-  if curl --connect-timeout 2 --max-time 5 -fsS http://127.0.0.1:18188/plants/api/config > "$BACKUP/config-check.json"; then break; fi
+  if curl --connect-timeout 2 --max-time 5 -fsS http://127.0.0.1:18188/api/config > "$BACKUP/config-check.json"; then break; fi
   sleep 0.5
 done
-curl --connect-timeout 2 --max-time 10 -fsS http://127.0.0.1:18188/plants/api/state > "$BACKUP/state-after.json"
+curl --connect-timeout 2 --max-time 10 -fsS http://127.0.0.1:18188/api/state > "$BACKUP/state-after.json"
 python3 - "$BUNDLE/auth.hash" "$BACKUP/Caddyfile.before" "$BACKUP/Caddyfile.candidate" <<'PY'
 import pathlib,re,sys
 password_hash=pathlib.Path(sys.argv[1]).read_text().strip()
 assert re.fullmatch(r'\$2[aby]\$\d\d\$[./A-Za-z0-9]{53}',password_hash), 'Invalid bcrypt hash'
 original=pathlib.Path(sys.argv[2]).read_text()
-block='''\t# BEGIN ZHISHI
-\t@zhishi path /plants /plants/*
-\thandle @zhishi {
-\t\tbasicauth bcrypt "Zhishi" {
-\t\t\tzhishi HASH
-\t\t}
-\t\treverse_proxy 127.0.0.1:18188
+block='''# BEGIN ZHISHI DOMAIN
+http://zhi.qdfb.tech {
+\t@zhishiChallenge path /.well-known/acme-challenge/*
+\thandle @zhishiChallenge {
+\t\troot * /var/lib/caddy/zhishi-zhi-qdfb-tech/webroot
+\t\tfile_server
 \t}
 \thandle {
-\t\treverse_proxy 127.0.0.1:18080
+\t\tredir https://zhi.qdfb.tech{uri} 308
 \t}
-\t# END ZHISHI'''.replace('HASH',password_hash)
-if '# BEGIN ZHISHI' in original:
- candidate,count=re.subn(r'(?m)^\s*# BEGIN ZHISHI[\s\S]*?^\s*# END ZHISHI',lambda _:block,original)
+}
+https://zhi.qdfb.tech {
+\ttls /var/lib/caddy/zhishi-zhi-qdfb-tech/tls/fullchain.pem /var/lib/caddy/zhishi-zhi-qdfb-tech/tls/key.pem
+\tbasicauth bcrypt "Zhishi" {
+\t\tzhishi HASH
+\t}
+\treverse_proxy 127.0.0.1:18188
+}
+# END ZHISHI DOMAIN'''.replace('HASH',password_hash)
+begin=r'(?m)^[ \t]*# BEGIN ZHISHI DOMAIN[ \t]*$'
+end=r'(?m)^[ \t]*# END ZHISHI DOMAIN[ \t]*$'
+begins=list(re.finditer(begin,original))
+ends=list(re.finditer(end,original))
+def assert_no_unknown_site(text):
+ config='\n'.join(line.split('#',1)[0] for line in text.splitlines())
+ assert not re.search(r'(?i)(?<![A-Za-z0-9_.-])zhi\.qdfb\.tech(?![A-Za-z0-9_.-])',config), 'Unmarked zhi.qdfb.tech configuration exists; inspect manually'
+if begins or ends:
+ assert len(begins)==len(ends)==1 and begins[0].end()<ends[0].start(), 'Unexpected ZHISHI DOMAIN markers'
+ start,finish=begins[0].start(),ends[0].end()
+ assert_no_unknown_site(original[:start]+original[finish:])
+ candidate=original[:start]+block+original[finish:]
 else:
- assert original.count('https://f.qdfb.tech {')==1, 'Unexpected site config'
- candidate,count=re.subn(r'(?m)^[ \t]*reverse_proxy 127\.0\.0\.1:18080[ \t]*$',lambda _:block,original)
-assert count==1, 'Unexpected routing config; inspect manually'
+ assert_no_unknown_site(original)
+ candidate=original+'\n'+block+'\n'
 pathlib.Path(sys.argv[3]).write_text(candidate)
 PY
 caddy validate --config "$BACKUP/Caddyfile.candidate" --adapter caddyfile
@@ -174,7 +201,7 @@ install_atomic 644 "$BACKUP/Caddyfile.candidate" /etc/caddy/Caddyfile
 systemctl reload caddy
 for service in zhishi caddy tongbanji-VVox8g; do systemctl is-active --quiet "$service"; done
 curl --connect-timeout 5 --max-time 20 -fsS https://f.qdfb.tech/api/health
-if ! STATUS=$(curl --connect-timeout 5 --max-time 20 -sS -o /dev/null -w '%{http_code}' https://f.qdfb.tech/plants/api/state); then
+if ! STATUS=$(curl --connect-timeout 5 --max-time 20 -sS -o /dev/null -w '%{http_code}' https://zhi.qdfb.tech/api/state); then
   rollback 1 'public authentication check failed'
 fi
 [[ $STATUS == 401 ]]
